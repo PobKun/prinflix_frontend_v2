@@ -1,0 +1,221 @@
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./htmlStatic/lib/video-js.css">
+  <link rel="stylesheet" href="./htmlStatic/lib/videojs-http-source-selector.css">
+  <link rel="stylesheet" href="./htmlStatic/lib/videojs.ads.min.css">
+  <link rel="stylesheet" href="./htmlStatic/lib/videojsx.vast.css">
+  <link rel="stylesheet" href="./htmlStatic/lib/videojs-seek-button.min.css">
+  <style>
+    body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <video style="width: 100%;height: 100%;"
+    id="my-video-vdojs"
+    class="video-js vds-me-design"
+    controls
+    preload="auto"
+    data-setup='{}'
+  >
+    <p class="vjs-no-js">
+      no javascript
+    </p>
+  </video>
+  <script src="./htmlStatic/lib/video.min.js"></script>
+  <script src="./htmlStatic/lib/videojs-http-source-selector.min.js"></script>
+  <script src="./htmlStatic/lib/videojs-contrib-quality-levels.min.js"></script>
+  <script src="./htmlStatic/lib/videojs.ads.min.js"></script>
+<script>
+    window.skipText = 'ข้าม'
+    window.skipTextBefore = 'ในอีก '
+    window.skipTextAfter = ' วินาที'
+  </script>
+  <script src="./htmlStatic/lib/videojsx.vast.js"></script>
+  <script src="./htmlStatic/lib/videojs-seek-button.min.js"></script>
+  <script>
+
+    let player = videojs('my-video-vdojs',{
+        loadingSpinner: true,
+        // fluid: true,
+        // fill: true,
+        controlBar: {
+            children: [
+                'playToggle',
+                'volumePanel',
+                "currentTimeDisplay",
+                "timeDivider",
+                "durationDisplay",
+                'progressControl',
+                'qualitySelector',
+            ],
+            volumePanel: {
+                inline: false
+            },
+        },
+        plugins: {
+            httpSourceSelector:
+            {
+                default: 'auto'
+            },
+
+        },
+        html5: {
+            hls: {
+             overrideNative: true,
+            },
+            nativeAudioTracks: false,
+            nativeVideoTracks: false,
+        },
+    });
+
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const vid = urlParams.get('vid')
+    console.log('[VID] >>',vid);
+    if(vid !== undefined && vid !== "" && vid !==  null) {
+        const urlWebsite = 'https://xxxxx/storage/v1/test/movie/'+vid.toString()+'/video/master.m3u8'
+        player.src({ type: 'application/x-mpegURL', src: urlWebsite });
+    }
+    player.httpSourceSelector();
+    player.playsinline(true);
+
+    let qualityLevels = player.qualityLevels();
+    qualityLevels.on('change', function() {
+        console.log('Quality Level changed!');
+        console.log('New level:', qualityLevels[qualityLevels.selectedIndex]);
+        console.log(qualityLevels[qualityLevels.selectedIndex]);
+    });
+
+    let SourceMenuButton =  videojs.getComponent("SourceMenuButton")
+    let pButton = videojs.extend(SourceMenuButton, {
+        constructor: function(player, options) {
+            SourceMenuButton.call(this, player, options);
+            this.controlText("MenuAll");
+            this.el().querySelector('.resolutionShow .vjs-icon-placeholder').innerHTML = 'Auto'
+        },
+        buildCSSClass: function() {
+            return "resolutionShow";
+        }
+    });
+    videojs.registerComponent("SourceMenuButton", pButton);
+
+
+    let SourceMenuItem = videojs.getComponent("SourceMenuItem")
+    console.log(SourceMenuItem);
+    let t = SourceMenuItem.prototype
+    t.handleClick = function() {
+            var e = this.options_;
+            console.log("Changing quality to (EDIT):", e.label)
+            document.querySelector('.resolutionShow .vjs-icon-placeholder').innerHTML = e.label
+            for (var t = this.player().qualityLevels(), o = 0; o < t.length; o++)
+                e.index == t.length ? t[o].enabled = !0 : e.index == o ? t[o].enabled = !0 : t[o].enabled = !1
+    }
+    
+    let myBtn = player.controlBar.addChild('button', {}, 6);
+    let myBtnEl = myBtn.el();
+    myBtnEl.innerHTML = '<span class="vjs-spacer"></span>';
+    myBtnEl.disabled = true
+    myBtnEl.style.margin = "auto"
+    myBtn.controlText("spacer Button");
+    myBtnEl.onclick = function () { alert('spacer Button')};
+
+    player.controlBar.addChild('fullscreenToggle');
+
+    player.seekButtons({
+            back: 10
+    });
+
+    player.on('fullscreenchange', function () {
+        if (this.isFullscreen()){
+            console.log('fullscreen');
+        } else {
+            console.log('exit')
+        }
+    })
+
+    const togglePlayPause = (player) => {
+        if (player.paused()) {
+            player.play();
+        } else {
+            player.pause();
+        }
+    }
+
+    const skipVDO = (time) =>{
+        console.log(player.currentTime());
+        const element = document.querySelector('.video-js.vds-me-design .vast-blocker');
+        if (typeof(element) != 'undefined' && element != null) {
+            console.log('Not skip in vast ads');
+        }else{
+            player.currentTime(player.currentTime() + time);
+        }
+    }
+
+    const vdoBackSkip = () => {
+        skipVDO(-10);
+        console.log('Skip Back');
+    }
+
+    const vdoForwardSkip = () => {
+        skipVDO(10);
+        console.log('Skip Forward');
+    }
+
+    document.body.addEventListener('keydown', (event) => {
+        const keyCode = event.keyCode || event.which;
+        if (keyCode == 32) {
+            if (event.target.type === 'button') {
+            event.target.blur();
+            event.preventDefault();
+            }
+            togglePlayPause(player);
+        }else if(keyCode == 37){ 
+            vdoBackSkip()
+        }else if(keyCode == 39){
+            vdoForwardSkip()
+        }
+    })                      
+    const getHost = (link) => {
+        var dl = document.createElement("a");
+        dl.href = link;
+        return dl.host.replace(/^www\./,'');
+    };
+
+    document.domain = document.domain;
+    const url = (window.location != window.parent.location) ? document.referrer : document.location.href;
+    window.addEventListener("load",async function(event) {
+            try {
+                const hostname = getHost(url)
+                console.log('[hostname] >>',hostname);
+                if(hostname !== 'localhost:4000' && hostname !== 'xxxxxxx.com' ) {
+                    console.log('[ERROR] >> DOMAIN');
+                    document.body.innerHTML = `
+                    <div style="position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);font-size:50px;text-align: center;"
+                        <h1>NOT WORKING</h1>
+                    </div>
+                    `;
+                }else{
+                    document.querySelector('.vjs-seek-button.skip-back .vjs-icon-placeholder').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="svg-white svg-size" viewBox="0 0 240 240" focusable="false"><path d="M113.2,131.078a21.589,21.589,0,0,0-17.7-10.6,21.589,21.589,0,0,0-17.7,10.6,44.769,44.769,0,0,0,0,46.3,21.589,21.589,0,0,0,17.7,10.6,21.589,21.589,0,0,0,17.7-10.6,44.769,44.769,0,0,0,0-46.3Zm-17.7,47.2c-7.8,0-14.4-11-14.4-24.1s6.6-24.1,14.4-24.1,14.4,11,14.4,24.1S103.4,178.278,95.5,178.278Zm-43.4,9.7v-51l-4.8,4.8-6.8-6.8,13-13a4.8,4.8,0,0,1,8.2,3.4v62.7l-9.6-.1Zm162-130.2v125.3a4.867,4.867,0,0,1-4.8,4.8H146.6v-19.3h48.2v-96.4H79.1v19.3c0,5.3-3.6,7.2-8,4.3l-41.8-27.9a6.013,6.013,0,0,1-2.7-8,5.887,5.887,0,0,1,2.7-2.7l41.8-27.9c4.4-2.9,8-1,8,4.3v19.3H209.2A4.974,4.974,0,0,1,214.1,57.778Z"></path></svg>'
+                    document.querySelector('.video-js.vds-me-design .vjs-big-play-button').insertAdjacentHTML("beforeBegin",`<div class="vjs-icon-seekback" aria-hidden="true" style="left: calc(20% - 25px);top: calc(50% - 25px);position: absolute;"><svg onclick="vdoBackSkip();" xmlns="http://www.w3.org/2000/svg" class="svg-white svg-size" viewBox="0 0 240 240" focusable="false" style="width: 50px;display: block;margin: 0px;height: 50px;padding: 0px;"><path d="M113.2,131.078a21.589,21.589,0,0,0-17.7-10.6,21.589,21.589,0,0,0-17.7,10.6,44.769,44.769,0,0,0,0,46.3,21.589,21.589,0,0,0,17.7,10.6,21.589,21.589,0,0,0,17.7-10.6,44.769,44.769,0,0,0,0-46.3Zm-17.7,47.2c-7.8,0-14.4-11-14.4-24.1s6.6-24.1,14.4-24.1,14.4,11,14.4,24.1S103.4,178.278,95.5,178.278Zm-43.4,9.7v-51l-4.8,4.8-6.8-6.8,13-13a4.8,4.8,0,0,1,8.2,3.4v62.7l-9.6-.1Zm162-130.2v125.3a4.867,4.867,0,0,1-4.8,4.8H146.6v-19.3h48.2v-96.4H79.1v19.3c0,5.3-3.6,7.2-8,4.3l-41.8-27.9a6.013,6.013,0,0,1-2.7-8,5.887,5.887,0,0,1,2.7-2.7l41.8-27.9c4.4-2.9,8-1,8,4.3v19.3H209.2A4.974,4.974,0,0,1,214.1,57.778Z"></path></svg> </div>`)
+                }
+            } catch (error) {
+                console.log('[ERROR] >> FETCH');
+                document.body.innerHTML = `
+                <div style="position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);font-size:50px;text-align: center;"
+                    <h1>NOT WORKING</h1>
+                </div>
+                `;
+            }
+    });
+
+    // document.addEventListener('contextmenu', function(e) {
+    //     e.preventDefault();
+    // });
+
+  </script>
+</body>
